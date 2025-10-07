@@ -1,15 +1,59 @@
 # Boltz MCP Server - Quick Start Guide
 
-Get your Boltz MCP server running in **under 10 minutes** using FastMCP Cloud.
+Get your Boltz MCP server running quickly with multiple deployment options.
 
-## 🚀 Fastest Path to Deployment
+---
+
+## 🎯 Choose Your Path
+
+### Option 1: SSH Tunnel (No Sudo) - ⭐ RECOMMENDED
+
+**Best for:** Users without admin access on lab computer
+
+**Time:** 15 minutes
+**Difficulty:** Easy
+**See:** [docs/NO_SUDO_SETUP.md](docs/NO_SUDO_SETUP.md) for complete instructions
+
+**Quick summary:**
+```bash
+# 1. On lab computer: Start server
+cd ~/boltz-mcp-server
+source venv/bin/activate
+python boltz_mcp_server.py
+
+# 2. On your laptop: Create tunnel
+ssh -L 8000:localhost:8000 user@lab-computer
+
+# 3. Configure Claude Desktop
+# URL: http://localhost:8000/mcp
+```
+
+---
+
+### Option 2: Direct HTTP (With Sudo)
+
+**Best for:** Users with admin access and public IP
+
+**Time:** 20 minutes
+**Difficulty:** Moderate
+**See:** [docs/setup_guide.md](docs/setup_guide.md#option-3-self-hosted-with-direct-http)
+
+---
+
+### Option 3: FastMCP Cloud (Testing Only)
+
+**⚠️ Cannot run Boltz - no GPUs in cloud!**
+
+Only useful for testing MCP framework without actual predictions.
+
+## 🚀 Detailed: SSH Tunnel Setup
 
 ### Prerequisites
-- GitHub account
+- SSH access to lab computer
 - Claude Desktop installed
-- Your code in a GitHub repository
+- Lab computer has Python 3.10-3.12 and GPUs
 
-### Step 1: Push to GitHub (2 minutes)
+### Step 1: Transfer Files (2 minutes)
 
 ```bash
 cd boltz-remote-mcp

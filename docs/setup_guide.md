@@ -6,11 +6,12 @@ This guide covers three deployment options for your Boltz MCP server, from easie
 
 1. [Prerequisites](#prerequisites)
 2. [Deployment Options Overview](#deployment-options-overview)
-3. [Option 1: FastMCP Cloud (Recommended - Easiest)](#option-1-fastmcp-cloud-recommended---easiest)
-4. [Option 2: Self-Hosted with Direct HTTP](#option-2-self-hosted-with-direct-http)
-5. [Option 3: Self-Hosted with Reverse Proxy](#option-3-self-hosted-with-reverse-proxy)
-6. [Testing Your Deployment](#testing-your-deployment)
-7. [Troubleshooting](#troubleshooting)
+3. [Option 1: SSH Tunnel (No Sudo Required - Recommended)](#option-1-ssh-tunnel-no-sudo-required---recommended)
+4. [Option 2: FastMCP Cloud (Testing Only)](#option-2-fastmcp-cloud-testing-only)
+5. [Option 3: Self-Hosted with Direct HTTP](#option-3-self-hosted-with-direct-http)
+6. [Option 4: Self-Hosted with Reverse Proxy](#option-4-self-hosted-with-reverse-proxy)
+7. [Testing Your Deployment](#testing-your-deployment)
+8. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -32,17 +33,63 @@ This guide covers three deployment options for your Boltz MCP server, from easie
 
 | Option | Ease of Setup | Best For | Pros | Cons |
 |--------|---------------|----------|------|------|
-| **FastMCP Cloud** | ⭐⭐⭐⭐⭐ Easiest | Quick deployment, testing | Automatic HTTPS, no network config | Requires GitHub repo, beta features |
-| **Direct HTTP** | ⭐⭐⭐ Moderate | Lab servers with public IP | Simple, direct connection | Need to manage firewall, no HTTPS |
-| **Reverse Proxy** | ⭐⭐ Advanced | Production deployments | HTTPS, auth, custom domain | More complex setup |
+| **SSH Tunnel** | ⭐⭐⭐⭐⭐ Easiest | No sudo access | No firewall config, works everywhere | Tunnel must stay active |
+| **Direct HTTP** | ⭐⭐⭐ Moderate | Lab servers with public IP | Simple, direct connection | Needs sudo for firewall |
+| **Reverse Proxy** | ⭐⭐ Advanced | Production deployments | HTTPS, auth, custom domain | Needs sudo, complex setup |
+| **FastMCP Cloud** | ⭐⭐⭐⭐ Easy | Testing MCP servers | Automatic HTTPS, no network config | **Can't run Boltz (no GPUs)** |
 
-**Recommendation:** Start with FastMCP Cloud for fastest setup, then migrate to self-hosted if you need more control.
+**Important:** FastMCP Cloud doesn't have GPUs, so it can't run Boltz inference. It's only useful for testing the MCP server framework.
+
+**Recommendation:**
+- **No sudo access?** Use SSH Tunnel (see [NO_SUDO_SETUP.md](NO_SUDO_SETUP.md))
+- **Have sudo and public IP?** Use Direct HTTP
+- **Production deployment?** Use Reverse Proxy
 
 ---
 
-## Option 1: FastMCP Cloud (Recommended - Easiest)
+## Option 1: SSH Tunnel (No Sudo Required - Recommended)
 
-FastMCP Cloud is the fastest way to deploy your server. It provides automatic deployment, HTTPS, and a public URL.
+**⚠️ Read this first if you don't have sudo/admin access on your lab computer!**
+
+SSH tunneling lets you expose your server through an existing SSH connection, bypassing all firewall and networking issues.
+
+**See the complete guide:** [**NO_SUDO_SETUP.md**](NO_SUDO_SETUP.md)
+
+This detailed guide covers:
+- ✅ Complete Python environment setup
+- ✅ FastMCP and Boltz installation
+- ✅ SSH tunnel configuration
+- ✅ Step-by-step instructions for each machine
+- ✅ Daily usage workflow
+- ✅ Troubleshooting
+
+### Quick Overview
+
+**Architecture:**
+```
+Your Laptop  ──SSH Tunnel──►  Lab Computer
+localhost:8000              localhost:8000
+     ↓                              ↓
+Claude Desktop              Boltz Server
+```
+
+**Steps:**
+1. Set up server on lab computer (no sudo needed)
+2. Create SSH tunnel: `ssh -L 8000:localhost:8000 user@lab-computer`
+3. Configure Claude Desktop to use `http://localhost:8000/mcp`
+4. Done!
+
+**Why this works:** SSH is already allowed through the firewall, so you can tunnel HTTP traffic through it.
+
+---
+
+## Option 2: FastMCP Cloud (Testing Only)
+
+**⚠️ Important:** FastMCP Cloud cannot run Boltz because it doesn't have GPUs. This option is only useful for testing the MCP server framework itself, not for actual protein predictions.
+
+If you want to test MCP connectivity without GPUs:
+
+FastMCP Cloud is the fastest way to deploy an MCP server. It provides automatic deployment, HTTPS, and a public URL.
 
 ### Step 1: Prepare Your Repository
 
@@ -128,7 +175,7 @@ Quit and relaunch Claude Desktop. You should see a 🔨 (hammer) icon indicating
 
 ---
 
-## Option 2: Self-Hosted with Direct HTTP
+## Option 3: Self-Hosted with Direct HTTP
 
 This option runs the server directly on your lab computer. Best if your lab computer has a public IP or you're on the same network.
 
@@ -301,14 +348,14 @@ Restart Claude Desktop.
 
 ---
 
-## Option 3: Self-Hosted with Reverse Proxy
+## Option 4: Self-Hosted with Reverse Proxy
 
 This option adds a reverse proxy (nginx/caddy) for HTTPS and better security. **Advanced users only.**
 
 ### Prerequisites
 - Domain name pointed to your server
 - Server with sudo access
-- Steps 1-3 from Option 2 completed
+- Steps 1-3 from Option 3 completed
 
 ### Step 1: Install Caddy (Automatic HTTPS)
 

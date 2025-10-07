@@ -33,35 +33,30 @@ This project lets you:
 
 ## 🚀 Quick Start
 
-### Option 1: FastMCP Cloud (Easiest - 10 minutes)
+### Option 1: ngrok Tunnel (No Sudo Required - RECOMMENDED)
 
-1. **Push to GitHub**
-   ```bash
-   git push origin main
-   ```
+**Best option if you don't have admin access on your lab computer.**
 
-2. **Deploy to FastMCP Cloud**
-   - Visit https://cloud.fastmcp.com
-   - Sign in with GitHub
-   - Create new project from your repo
-   - Wait for build (~5-10 minutes)
+ngrok creates a public HTTPS URL that tunnels to your lab computer, bypassing firewall issues completely.
 
-3. **Configure Claude Desktop**
-   ```json
-   {
-     "mcpServers": {
-       "boltz-remote": {
-         "url": "https://your-project.fastmcp.app/mcp"
-       }
-     }
-   }
-   ```
+```bash
+# On lab computer (via SSH)
+cd ~/boltz-remote-mcp/server
+source venv/bin/activate
 
-4. **Restart Claude Desktop** and start using Boltz!
+# Start server
+python boltz_mcp_server.py
 
-See [QUICKSTART.md](QUICKSTART.md) for detailed instructions.
+# In another terminal, start ngrok
+ngrok http 8000
 
-### Option 2: Self-Hosted (Lab Server)
+# Copy the ngrok URL (like https://abc123.ngrok-free.app)
+# Configure Claude Desktop to use that URL + /mcp
+```
+
+**See [docs/NGROK_SETUP.md](docs/NGROK_SETUP.md) for complete step-by-step instructions.**
+
+### Option 2: Self-Hosted with Firewall Access
 
 ```bash
 # On lab computer
@@ -109,10 +104,13 @@ The server exposes these MCP tools:
 
 ## 📖 Documentation
 
-- **[QUICKSTART.md](QUICKSTART.md)** - Get running in 10 minutes
+- **[docs/NGROK_SETUP.md](docs/NGROK_SETUP.md)** - **⭐ START HERE** for no-sudo setup (recommended, detailed step-by-step)
+- **[docs/NO_SUDO_SETUP.md](docs/NO_SUDO_SETUP.md)** - Alternative: SSH tunneling method
 - **[docs/setup_guide.md](docs/setup_guide.md)** - Complete setup for all deployment options
+- **[QUICKSTART.md](QUICKSTART.md)** - Quick reference guide
 - **[docs/usage_examples.md](docs/usage_examples.md)** - Example workflows
 - **[docs/troubleshooting.md](docs/troubleshooting.md)** - Common issues and solutions
+- **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** - Migrating from old ngrok approach
 
 ## 🔧 Configuration
 
@@ -175,22 +173,27 @@ See [docs/setup_guide.md](docs/setup_guide.md) for security best practices.
 
 ## 🐛 Troubleshooting
 
+**Don't have sudo/admin access?**
+- Use SSH tunneling method (see [docs/NO_SUDO_SETUP.md](docs/NO_SUDO_SETUP.md))
+- No firewall configuration needed
+
 **Server won't start?**
 - Check Python version (3.10-3.12 required)
 - Verify CUDA drivers with `nvidia-smi`
-- Ensure dependencies installed
+- Ensure dependencies installed: `pip install -r requirements.txt`
 
 **Claude Desktop can't connect?**
-- Verify server is running
-- Check firewall allows port 8000
-- Confirm URL in config is correct
+- Verify server is running on lab computer
+- Check SSH tunnel is active (if using SSH method)
+- Confirm URL in config: `http://localhost:8000/mcp` for SSH tunnel
+- Restart Claude Desktop after config changes
 
 **Predictions failing?**
 - Check GPU memory with `nvidia-smi`
 - Reduce `recycling_steps` or `sampling_steps`
 - View server logs for errors
 
-See [docs/troubleshooting.md](docs/troubleshooting.md) for detailed solutions.
+See [docs/troubleshooting.md](docs/troubleshooting.md) and [docs/NO_SUDO_SETUP.md](docs/NO_SUDO_SETUP.md) for detailed solutions.
 
 ## 🙏 Acknowledgments
 
