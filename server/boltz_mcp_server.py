@@ -207,6 +207,7 @@ async def run_boltz_inference(
         "--sampling_steps", str(sampling_steps),  # Diffusion steps
         "--diffusion_samples", str(diffusion_samples),  # How many predictions to generate
         "--cache", str(MODEL_CACHE_DIR),  # Where to cache model weights
+        "--use_msa_server",  # Auto-generate MSA using mmseqs2 server (required for FASTA without pre-computed MSA)
     ]
 
     try:
@@ -391,10 +392,13 @@ async def predict_structure_from_sequence(
             }
 
         # Create FASTA format file
-        # FASTA format:
-        # >header_line (starts with >)
-        # SEQUENCE DATA (can be multiple lines)
-        fasta_content = f">{chain_id}\n{sequence_upper}\n"
+        # FASTA format for Boltz (deprecated but still supported):
+        # >CHAIN_ID|ENTITY_TYPE|MSA_PATH
+        # SEQUENCE
+        # For protein without pre-computed MSA (relying on --use_msa_server flag):
+        # >A|protein
+        # SEQUENCE
+        fasta_content = f">{chain_id}|protein\n{sequence_upper}\n"
 
         # Generate filename based on sequence hash
         seq_hash = generate_job_id(sequence_upper)
