@@ -1,0 +1,27 @@
+{
+  "__comment1__": "Claude Desktop MCP Configuration",
+  "__comment2__": "This file configures Claude Desktop to connect to your remote Boltz MCP server",
+  "__comment3__": "Location: This file should be placed at:",
+  "__comment4__": "  - macOS: ~/Library/Application Support/Claude/claude_desktop_config.json",
+  "__comment5__": "  - Windows: %APPDATA%/Claude/claude_desktop_config.json",
+  "__comment6__": "  - Linux: ~/.config/Claude/claude_desktop_config.json",
+
+  "mcpServers": {
+    "boltz-remote": {
+      "__comment__": "Replace NGROK_URL_HERE with your actual ngrok URL from the server",
+      "__example__": "tcp://0.tcp.ngrok.io:12345",
+
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/client-stdio",
+        "NGROK_URL_HERE"
+      ],
+
+      "env": {
+        "__comment__": "Optional: Set environment variables if needed",
+        "MCP_LOG_LEVEL": "info"
+      }
+    }
+  }
+}

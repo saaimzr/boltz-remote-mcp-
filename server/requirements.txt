@@ -1,0 +1,14 @@
+# Boltz MCP Server Dependencies
+
+# FastMCP - Simplified MCP server framework
+# Provides decorators and utilities for building MCP servers
+fastmcp>=0.1.0
+
+# Boltz - Protein structure prediction model
+# Install from GitHub: pip install git+https://github.com/jwohlwend/boltz.git
+# Note: This will also install PyTorch, transformers, and other ML dependencies
+# Requires: Python 3.8+, CUDA-capable GPU
+
+# Additional utilities
+python-dotenv>=1.0.0  # For loading environment variables from .env files
+pyngrok>=7.0.0  # Python wrapper for ngrok tunneling
