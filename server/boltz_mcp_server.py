@@ -222,12 +222,20 @@ async def run_boltz_inference(
         # Wait for process to complete and get output
         stdout, stderr = await process.communicate()
 
+        # Decode output for logging
+        stdout_str = stdout.decode('utf-8')
+        stderr_str = stderr.decode('utf-8')
+
+        # Store stdout/stderr in job info for debugging
+        jobs[job_id]["stdout"] = stdout_str
+        jobs[job_id]["stderr"] = stderr_str
+
         # Check if command succeeded (return code 0 = success)
         if process.returncode != 0:
             # Update job status to failed
             jobs[job_id]["status"] = "failed"
-            jobs[job_id]["error"] = stderr.decode('utf-8')
-            raise RuntimeError(f"Boltz failed: {stderr.decode('utf-8')}")
+            jobs[job_id]["error"] = f"Boltz command failed with return code {process.returncode}\nSTDERR: {stderr_str}\nSTDOUT: {stdout_str}"
+            raise RuntimeError(f"Boltz failed: {stderr_str}")
 
         # Find the output CIF file
         # Boltz typically outputs: <job_output_dir>/predictions/<name>.cif
@@ -235,7 +243,12 @@ async def run_boltz_inference(
         cif_files = list(job_output_dir.glob("**/*.cif"))
 
         if not cif_files:
-            raise RuntimeError("No CIF output file found after prediction")
+            # List what files were actually created for debugging
+            all_files = list(job_output_dir.glob("**/*"))
+            files_list = "\n".join([str(f.relative_to(job_output_dir)) for f in all_files if f.is_file()])
+            error_msg = f"No CIF output file found after prediction.\nSearched in: {job_output_dir}\nFiles found:\n{files_list}\nSTDOUT: {stdout_str}\nSTDERR: {stderr_str}"
+            jobs[job_id]["error"] = error_msg
+            raise RuntimeError(error_msg)
 
         # Take the first CIF file (or could implement selection logic)
         output_cif = cif_files[0]
