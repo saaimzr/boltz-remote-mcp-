@@ -202,10 +202,10 @@ async def run_boltz_inference(
         "predict",  # Subcommand for running predictions
         str(input_path),  # Input file path
         "--out_dir", str(job_output_dir),  # Output directory
-        "--devices", ",".join(map(str, devices)),  # GPU devices: "0" or "0,1"
+        "--devices", str(len(devices)),  # Number of GPU devices to use
         "--recycling_steps", str(recycling_steps),  # Number of recycling iterations
         "--sampling_steps", str(sampling_steps),  # Diffusion steps
-        "--num_samples", str(diffusion_samples),  # How many predictions to generate
+        "--diffusion_samples", str(diffusion_samples),  # How many predictions to generate
         "--cache", str(MODEL_CACHE_DIR),  # Where to cache model weights
     ]
 
