@@ -1,80 +1,169 @@
-# Complete Setup Guide - Boltz Remote MCP
+# Boltz Remote MCP Server - Complete Setup Guide
 
-This guide provides step-by-step instructions for setting up the complete system: remote Boltz MCP server on your lab computer and Claude Desktop client on your local laptop.
+This guide covers three deployment options for your Boltz MCP server, from easiest to most customizable.
 
-## Overview
+## 📋 Table of Contents
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    DEPLOYMENT WORKFLOW                      │
-└─────────────────────────────────────────────────────────────┘
+1. [Prerequisites](#prerequisites)
+2. [Deployment Options Overview](#deployment-options-overview)
+3. [Option 1: FastMCP Cloud (Recommended - Easiest)](#option-1-fastmcp-cloud-recommended---easiest)
+4. [Option 2: Self-Hosted with Direct HTTP](#option-2-self-hosted-with-direct-http)
+5. [Option 3: Self-Hosted with Reverse Proxy](#option-3-self-hosted-with-reverse-proxy)
+6. [Testing Your Deployment](#testing-your-deployment)
+7. [Troubleshooting](#troubleshooting)
 
-Step 1: Transfer files to lab computer
-Step 2: Install dependencies on lab computer
-Step 3: Configure ngrok
-Step 4: Start MCP server on lab computer
-Step 5: Configure Claude Desktop on local laptop
-Step 6: Test the connection
-```
+---
 
-## Part 1: Lab Computer Setup (Remote Server)
+## Prerequisites
 
-### Step 1.1: Transfer Server Files
+### On Lab Computer (GPU Server)
+- Python 3.10, 3.11, or 3.12 (⚠️ NOT 3.13+)
+- CUDA-capable GPU with drivers installed
+- ~10GB disk space for Boltz models
+- Network access
 
-From your local laptop, transfer the `server` directory to your lab computer.
+### On Local Laptop
+- Claude Desktop installed ([download here](https://claude.ai/download))
+- Internet connection
 
-**Option A: Using SCP (Secure Copy)**
+---
+
+## Deployment Options Overview
+
+| Option | Ease of Setup | Best For | Pros | Cons |
+|--------|---------------|----------|------|------|
+| **FastMCP Cloud** | ⭐⭐⭐⭐⭐ Easiest | Quick deployment, testing | Automatic HTTPS, no network config | Requires GitHub repo, beta features |
+| **Direct HTTP** | ⭐⭐⭐ Moderate | Lab servers with public IP | Simple, direct connection | Need to manage firewall, no HTTPS |
+| **Reverse Proxy** | ⭐⭐ Advanced | Production deployments | HTTPS, auth, custom domain | More complex setup |
+
+**Recommendation:** Start with FastMCP Cloud for fastest setup, then migrate to self-hosted if you need more control.
+
+---
+
+## Option 1: FastMCP Cloud (Recommended - Easiest)
+
+FastMCP Cloud is the fastest way to deploy your server. It provides automatic deployment, HTTPS, and a public URL.
+
+### Step 1: Prepare Your Repository
+
+If you haven't already, push your code to GitHub:
 
 ```bash
-# From your local laptop
+# On your local machine or lab computer
+cd boltz-remote-mcp
+
+# Initialize git if needed
+git init
+git add .
+git commit -m "Initial Boltz MCP server"
+
+# Push to GitHub
+git remote add origin https://github.com/YOUR_USERNAME/boltz-remote-mcp.git
+git push -u origin main
+```
+
+### Step 2: Deploy to FastMCP Cloud
+
+1. Go to [https://cloud.fastmcp.com](https://cloud.fastmcp.com)
+2. Sign in with your GitHub account
+3. Click "New Project"
+4. Select your `boltz-remote-mcp` repository
+5. Configure project:
+   - **Name:** `boltz-mcp` (or your choice)
+   - **Server file:** `server/boltz_mcp_server.py`
+   - **Requirements:** `server/requirements.txt`
+6. Click "Deploy"
+
+### Step 3: Wait for Build
+
+FastMCP Cloud will:
+- Clone your repository
+- Install dependencies (including Boltz - this takes ~5-10 minutes)
+- Start your server
+- Provide a deployment URL
+
+Your server will be available at: `https://your-project-name.fastmcp.app/mcp`
+
+### Step 4: Configure Claude Desktop
+
+On your local laptop:
+
+**macOS:**
+```bash
+cd ~/Library/Application\ Support/Claude/
+nano claude_desktop_config.json
+```
+
+**Windows:**
+```powershell
+cd $env:APPDATA\Claude
+notepad claude_desktop_config.json
+```
+
+**Linux:**
+```bash
+cd ~/.config/Claude/
+nano claude_desktop_config.json
+```
+
+Add this configuration:
+
+```json
+{
+  "mcpServers": {
+    "boltz-remote": {
+      "url": "https://your-project-name.fastmcp.app/mcp"
+    }
+  }
+}
+```
+
+Replace `your-project-name` with your actual FastMCP Cloud project name.
+
+### Step 5: Restart Claude Desktop
+
+Quit and relaunch Claude Desktop. You should see a 🔨 (hammer) icon indicating the server is connected.
+
+**That's it!** Your Boltz server is now accessible from Claude Desktop.
+
+---
+
+## Option 2: Self-Hosted with Direct HTTP
+
+This option runs the server directly on your lab computer. Best if your lab computer has a public IP or you're on the same network.
+
+### Step 1: Transfer Files to Lab Computer
+
+**Option A: Using Git**
+```bash
+# On lab computer
+git clone https://github.com/YOUR_USERNAME/boltz-remote-mcp.git
+cd boltz-remote-mcp/server
+```
+
+**Option B: Using SCP**
+```bash
+# On local machine
 cd boltz-remote-mcp
 scp -r server/ username@lab-computer:/home/username/boltz-mcp-server/
 ```
 
-**Option B: Using rsync**
+### Step 2: Setup Python Environment
 
 ```bash
-# From your local laptop
-cd boltz-remote-mcp
-rsync -avz server/ username@lab-computer:/home/username/boltz-mcp-server/
-```
-
-**Option C: Using Git (if lab computer has internet)**
-
-```bash
-# On local laptop
-cd boltz-remote-mcp
-git init
-git add .
-git commit -m "Initial Boltz MCP server"
-git push origin main
-
-# On lab computer
-git clone <your-repo-url> boltz-mcp-server
-cd boltz-mcp-server/server
-```
-
-**Option D: Manual copy via USB/network drive**
-
-1. Copy the entire `server` folder to a USB drive
-2. Connect USB to lab computer
-3. Copy to lab computer directory
-
-### Step 1.2: SSH into Lab Computer
-
-```bash
-ssh username@lab-computer-hostname
+# SSH into lab computer
+ssh username@lab-computer
 cd ~/boltz-mcp-server
-```
 
-### Step 1.3: Install Python Dependencies
+# Check Python version (must be 3.10, 3.11, or 3.12)
+python3 --version
 
-**No sudo required!** All installations will be in your user directory.
+# If Python 3.13+, use specific version
+python3.12 --version  # Try 3.12
+python3.11 --version  # Or 3.11
+python3.10 --version  # Or 3.10
 
-```bash
-cd server
-
-# Create Python virtual environment
+# Create virtual environment (use python3.12 if needed)
 python3 -m venv venv
 
 # Activate virtual environment
@@ -86,265 +175,242 @@ pip install --upgrade pip
 # Install dependencies
 pip install -r requirements.txt
 
-# Install Boltz (this may take 5-10 minutes)
-pip install git+https://github.com/jwohlwend/boltz.git
+# Install Boltz (takes 5-10 minutes)
+pip install boltz[cuda] -U
 ```
 
-**Note:** Boltz installation will download ~3-5GB of dependencies including PyTorch, transformers, and scientific libraries.
-
-### Step 1.4: Install ngrok (No Sudo Required)
+### Step 3: Configure Environment
 
 ```bash
-# Download ngrok binary
-cd ~/
-wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
-
-# Extract (no sudo needed)
-tar -xzf ngrok-v3-stable-linux-amd64.tgz
-
-# Move to a directory in your PATH
-mkdir -p ~/bin
-mv ngrok ~/bin/
-
-# Add to PATH (add this to ~/.bashrc or ~/.bash_profile)
-echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-
-# Verify installation
-ngrok version
-```
-
-### Step 1.5: Configure ngrok Authentication
-
-1. **Sign up for ngrok account** (free): https://dashboard.ngrok.com/signup
-2. **Get your auth token**: https://dashboard.ngrok.com/get-started/your-authtoken
-3. **Configure ngrok:**
-
-```bash
-cd ~/boltz-mcp-server/server
-
-# Create .env file
+# Copy example env file
 cp .env.example .env
 
-# Edit .env file
-nano .env  # or vim, emacs, etc.
+# Edit configuration
+nano .env
 ```
 
-4. **Add your ngrok token to .env:**
+Update the following settings:
 
 ```bash
-NGROK_AUTH_TOKEN=your_actual_token_here
-CUDA_VISIBLE_DEVICES=0
+# Server Configuration
+BOLTZ_TRANSPORT=http
+BOLTZ_HOST=0.0.0.0
+BOLTZ_PORT=8000
+
+# GPU Configuration
+CUDA_VISIBLE_DEVICES=0  # Adjust based on available GPUs
+
+# Optional: Add authentication
+# Generate token: python -c "import secrets; print(secrets.token_urlsafe(32))"
+# BOLTZ_AUTH_TOKEN=your_secure_token_here
 ```
 
-Save and exit (Ctrl+X, then Y, then Enter in nano).
+### Step 4: Configure Firewall
 
-### Step 1.6: Verify GPU Access
+You need to open port 8000 for external access:
 
+**If you have sudo access:**
 ```bash
-# Check CUDA availability
-nvidia-smi
-
-# You should see your GPU(s) listed
-# If you get "command not found", CUDA drivers may not be installed
-# Contact your lab admin if GPUs aren't visible
+sudo firewall-cmd --permanent --add-port=8000/tcp
+sudo firewall-cmd --reload
 ```
 
-### Step 1.7: Make Scripts Executable
+**If you don't have sudo access:**
+Ask your lab administrator to open port 8000.
+
+### Step 5: Start the Server
 
 ```bash
-chmod +x run_server.sh
-chmod +x start_ngrok_tunnel.py
+# Load environment variables
+source .env
+
+# Start server
+python boltz_mcp_server.py
 ```
 
-### Step 1.8: Test Boltz Installation
+You should see:
+```
+Starting Boltz MCP Server...
+Upload directory: /home/username/.boltz_mcp/uploads
+Output directory: /home/username/.boltz_mcp/outputs
+Model cache directory: /home/username/.boltz_mcp/models
 
+============================================================
+Starting HTTP server on 0.0.0.0:8000
+Server will be accessible at: http://0.0.0.0:8000/mcp/
+============================================================
+```
+
+### Step 6: Keep Server Running
+
+The server stops when you close SSH. Use `tmux` or `screen` to keep it running:
+
+**Using tmux:**
 ```bash
-# Activate virtual environment if not already active
+# Start tmux session
+tmux new -s boltz
+
+# Run server
+cd ~/boltz-mcp-server
 source venv/bin/activate
+python boltz_mcp_server.py
 
-# Test Boltz CLI
-boltz --help
-
-# This should display Boltz help message
-# If you get "command not found", Boltz installation failed
+# Detach: Ctrl+B then D
+# Reattach later: tmux attach -t boltz
 ```
 
-### Step 1.9: Start the MCP Server
-
-**Option A: Using the bash script (recommended)**
-
+**Using screen:**
 ```bash
-./run_server.sh
-```
+# Start screen session
+screen -S boltz
 
-**Option B: Manual startup**
-
-```bash
-# Activate virtual environment
+# Run server
+cd ~/boltz-mcp-server
 source venv/bin/activate
+python boltz_mcp_server.py
 
-# Start ngrok tunnel
-python3 start_ngrok_tunnel.py &
-
-# Wait a few seconds for tunnel to establish
-sleep 3
-
-# Get ngrok URL
-cat ngrok_url.txt
-
-# Start MCP server
-python3 boltz_mcp_server.py
+# Detach: Ctrl+A then D
+# Reattach later: screen -r boltz
 ```
 
-### Step 1.10: Copy the ngrok URL
+### Step 7: Configure Claude Desktop
 
-After starting the server, you'll see output like:
-
-```
-[SUCCESS] ngrok tunnel established!
-[SUCCESS] Public URL: tcp://0.tcp.ngrok.io:12345
-```
-
-**Copy this URL!** You'll need it for Claude Desktop configuration.
-
-You can also retrieve it later:
-
+Get your lab computer's IP address:
 ```bash
-cat ~/boltz-mcp-server/server/ngrok_url.txt
+# On lab computer
+hostname -I
+# Or
+curl ifconfig.me
 ```
 
-## Part 2: Local Laptop Setup (Claude Desktop Client)
+On your local laptop, edit Claude Desktop config:
 
-### Step 2.1: Install Claude Desktop
-
-Download and install Claude Desktop from: https://claude.ai/download
-
-### Step 2.2: Locate Configuration Directory
-
-**macOS:**
-```bash
-cd ~/Library/Application\ Support/Claude/
-```
-
-**Windows PowerShell:**
-```powershell
-cd $env:APPDATA\Claude
-```
-
-**Linux:**
-```bash
-cd ~/.config/Claude/
-```
-
-### Step 2.3: Create or Edit Configuration File
-
-**macOS/Linux:**
-
-```bash
-# Navigate to config directory (see above)
-
-# Backup existing config if present
-if [ -f claude_desktop_config.json ]; then
-    cp claude_desktop_config.json claude_desktop_config.json.backup
-fi
-
-# Create new config (replace YOUR_NGROK_URL with actual URL)
-cat > claude_desktop_config.json << 'EOF'
-{
-  "mcpServers": {
-    "boltz-remote": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/client-stdio",
-        "YOUR_NGROK_URL"
-      ]
-    }
-  }
-}
-EOF
-```
-
-**Windows PowerShell:**
-
-```powershell
-# Navigate to config directory
-cd $env:APPDATA\Claude
-
-# Backup existing config
-if (Test-Path claude_desktop_config.json) {
-    Copy-Item claude_desktop_config.json claude_desktop_config.json.backup
-}
-
-# Create configuration object
-$config = @{
-    mcpServers = @{
-        "boltz-remote" = @{
-            command = "npx"
-            args = @(
-                "-y",
-                "@modelcontextprotocol/client-stdio",
-                "YOUR_NGROK_URL"
-            )
-        }
-    }
-} | ConvertTo-Json -Depth 10
-
-# Save to file
-$config | Out-File -FilePath claude_desktop_config.json -Encoding UTF8
-```
-
-**Replace `YOUR_NGROK_URL`** with the actual URL from Step 1.10!
-
-Example:
 ```json
 {
   "mcpServers": {
     "boltz-remote": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/client-stdio",
-        "tcp://0.tcp.ngrok.io:12345"
-      ]
+      "url": "http://YOUR_LAB_IP:8000/mcp"
     }
   }
 }
 ```
 
-### Step 2.4: Restart Claude Desktop
+Replace `YOUR_LAB_IP` with your lab computer's actual IP address.
 
-1. **Quit Claude Desktop completely** (not just close the window)
-   - macOS: Cmd+Q or Claude menu → Quit
-   - Windows: Right-click system tray icon → Exit
-   - Linux: Close window or use quit menu
-2. **Launch Claude Desktop again**
+Restart Claude Desktop.
 
-### Step 2.5: Verify Connection
+---
 
-Open Claude Desktop and try:
+## Option 3: Self-Hosted with Reverse Proxy
 
+This option adds a reverse proxy (nginx/caddy) for HTTPS and better security. **Advanced users only.**
+
+### Prerequisites
+- Domain name pointed to your server
+- Server with sudo access
+- Steps 1-3 from Option 2 completed
+
+### Step 1: Install Caddy (Automatic HTTPS)
+
+```bash
+# Install Caddy
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update
+sudo apt install caddy
+```
+
+### Step 2: Configure Caddy
+
+Create Caddyfile:
+
+```bash
+sudo nano /etc/caddy/Caddyfile
+```
+
+Add configuration:
+
+```
+boltz.yourdomain.com {
+    reverse_proxy localhost:8000
+
+    # Optional: Basic authentication
+    # basicauth {
+    #     username $2a$14$hashed_password
+    # }
+}
+```
+
+Replace `boltz.yourdomain.com` with your actual domain.
+
+### Step 3: Start Services
+
+```bash
+# Reload Caddy
+sudo systemctl reload caddy
+
+# Start Boltz server (use systemd for production)
+sudo nano /etc/systemd/system/boltz-mcp.service
+```
+
+Add systemd service file:
+
+```ini
+[Unit]
+Description=Boltz MCP Server
+After=network.target
+
+[Service]
+Type=simple
+User=your_username
+WorkingDirectory=/home/your_username/boltz-mcp-server
+Environment="PATH=/home/your_username/boltz-mcp-server/venv/bin"
+EnvironmentFile=/home/your_username/boltz-mcp-server/.env
+ExecStart=/home/your_username/boltz-mcp-server/venv/bin/python boltz_mcp_server.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+
+```bash
+sudo systemctl enable boltz-mcp
+sudo systemctl start boltz-mcp
+sudo systemctl status boltz-mcp
+```
+
+### Step 4: Configure Claude Desktop
+
+```json
+{
+  "mcpServers": {
+    "boltz-remote": {
+      "url": "https://boltz.yourdomain.com/mcp"
+    }
+  }
+}
+```
+
+---
+
+## Testing Your Deployment
+
+Once Claude Desktop is configured and restarted:
+
+### Test 1: Check Connection
+
+In Claude Desktop:
 ```
 Can you call the get_server_info tool from the Boltz server?
 ```
 
-If successful, you should see server information including GPU details!
+Expected: Server information including GPU details.
 
-## Part 3: Testing the System
+### Test 2: Simple Sequence Prediction
 
-### Test 1: Server Info
-
-In Claude Desktop:
-```
-What information can you get about the Boltz server?
-```
-
-Expected response: GPU info, disk space, server version, etc.
-
-### Test 2: Simple Protein Prediction (from sequence)
-
-In Claude Desktop:
 ```
 Can you predict the structure of this protein sequence:
 MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQAPILSRVGDGTQDNLSGAEKAVQVKVKALPDAQFEVVHSLAKWKRQTLGQHDFSAGEGLYTHMKALRPDEDRLSPLHSVYVDQWDWERVMGDGERQFSTLKSTVEAIWAGIKATEAAVSEEFGLAPFLPDQIHFVHSQELLSRYPDLDAKGRERAIAKDLGAVFLVGIGGKLSDGHRHDVRAPDYDDWSTPSELGHAGLNGDILVWNPVLEDAFELSSMGIRVDADTLKHQLALTGDEDRLELEWHQALLRGEMPQTIGGGIGQSRLTMLLLQLPHIGQVQAGVWPAAVRESVPSLL
@@ -353,187 +419,146 @@ MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQAPILSRVGDGTQDNLSGAEKAVQVKVKALPDAQFEVVHSLAKWKRQT
 This should:
 1. Create a job
 2. Return a job ID
-3. Allow you to check status
-4. Eventually return a predicted structure file
+3. Allow status checking
+4. Eventually return a predicted structure
 
-### Test 3: Upload PDB File
-
-This requires a PDB file. You can download a test PDB:
-
-```bash
-# On local laptop
-curl https://files.rcsb.org/download/1UBQ.pdb -o 1UBQ.pdb
-```
-
-Then in Claude Desktop:
-```
-I'm uploading a PDB file (1UBQ.pdb). Can you run a structure prediction on it?
-```
+---
 
 ## Troubleshooting
 
-### Server Issues
+### Server Won't Start
 
-**Problem: "NGROK_AUTH_TOKEN not set"**
-- Solution: Check `.env` file exists and contains valid token
-- Verify with: `cat ~/boltz-mcp-server/server/.env`
+**Problem:** `ModuleNotFoundError: No module named 'fastmcp'`
+```bash
+pip install fastmcp>=2.0.0
+```
 
-**Problem: "nvidia-smi not found"**
-- Solution: CUDA drivers not installed or not in PATH
-- Check with lab admin for GPU access
-- Boltz requires CUDA-capable GPU
+**Problem:** `ModuleNotFoundError: No module named 'boltz'`
+```bash
+pip install boltz[cuda] -U
+```
 
-**Problem: "Boltz command not found"**
-- Solution: Virtual environment not activated or Boltz not installed
-- Activate venv: `source venv/bin/activate`
-- Reinstall Boltz: `pip install git+https://github.com/jwohlwend/boltz.git`
+**Problem:** Python version incompatible
+```bash
+# Check version
+python3 --version
 
-**Problem: "Permission denied" when running scripts**
-- Solution: Make scripts executable
-- Run: `chmod +x run_server.sh start_ngrok_tunnel.py`
+# Use specific version
+python3.12 -m venv venv
+source venv/bin/activate
+```
 
-**Problem: ngrok tunnel fails to start**
-- Solution: Check auth token is correct
-- Verify network access (some networks block ngrok)
-- Check ngrok.log for detailed errors
+### Connection Issues
 
-### Client Issues
+**Problem:** Claude Desktop can't connect
 
-**Problem: Claude Desktop doesn't see MCP server**
-- Solution: Check config file location and JSON syntax
-- Verify file is at correct path (see Step 2.2)
-- Validate JSON at https://jsonlint.com
+1. Check server is running:
+   ```bash
+   curl http://localhost:8000/mcp/
+   ```
 
-**Problem: "Connection timeout"**
-- Solution:
-  - Verify server is running on lab computer
-  - Check ngrok URL is correct and still active
-  - Test network connectivity: `curl -v https://ngrok.io`
+2. Check firewall allows port 8000
 
-**Problem: Tools not appearing in Claude Desktop**
-- Solution:
-  - Fully restart Claude Desktop (quit and relaunch)
-  - Check server logs for errors
-  - Try get_server_info tool first to verify connection
+3. Verify IP address is correct
+
+4. Try from same network first
+
+### GPU Not Found
+
+**Problem:** `nvidia-smi: command not found`
+
+CUDA drivers not installed. Contact lab admin.
+
+**Problem:** "No CUDA devices available"
+
+```bash
+# Check GPU visibility
+echo $CUDA_VISIBLE_DEVICES
+
+# Check nvidia-smi
+nvidia-smi
+```
 
 ### Performance Issues
 
-**Problem: Predictions taking too long**
-- Adjust parameters:
-  - Reduce `recycling_steps` (default: 3, min: 1)
-  - Reduce `sampling_steps` (default: 200, min: 50)
-- Check GPU utilization: `nvidia-smi` on server
+**Problem:** Predictions too slow
 
-**Problem: Out of memory errors**
-- Use fewer GPUs or smaller sequences
-- Close other GPU-intensive processes
-- Contact lab admin for more GPU resources
-
-## Keeping Server Running
-
-The server runs in your SSH session. If you disconnect, it will stop.
-
-**Option 1: Use tmux (recommended)**
-
-```bash
-# Install tmux (if not already installed)
-# No sudo? Ask lab admin or use alternative methods
-
-# Start tmux session
-tmux new -s boltz-server
-
-# Run server
-cd ~/boltz-mcp-server/server
-./run_server.sh
-
-# Detach from session: Ctrl+B then D
-# Server keeps running!
-
-# Reattach later:
-tmux attach -t boltz-server
+Reduce parameters:
+```python
+recycling_steps=1    # Default: 3
+sampling_steps=100   # Default: 200
 ```
 
-**Option 2: Use screen**
+**Problem:** Out of memory
 
+Use smaller sequences or fewer GPUs:
 ```bash
-# Start screen session
-screen -S boltz-server
-
-# Run server
-cd ~/boltz-mcp-server/server
-./run_server.sh
-
-# Detach: Ctrl+A then D
-
-# Reattach later:
-screen -r boltz-server
+CUDA_VISIBLE_DEVICES=0  # Use only 1 GPU
 ```
 
-**Option 3: Use nohup**
-
-```bash
-# Run in background
-nohup ./run_server.sh > server.log 2>&1 &
-
-# Server runs even after disconnecting
-
-# Stop later:
-pkill -f boltz_mcp_server.py
-```
-
-## Updating ngrok URL
-
-**Free ngrok tier:** URL changes each restart.
-
-When you restart the server:
-
-1. Get new URL from server: `cat ngrok_url.txt`
-2. Update Claude Desktop config (Step 2.3)
-3. Restart Claude Desktop
-
-**Pro tip:** Upgrade to ngrok Pro for persistent URLs.
-
-## Security Best Practices
-
-1. **Don't share ngrok URLs publicly** - they provide direct access to your server
-2. **Monitor server logs** - watch for unexpected access
-3. **Use strong lab computer password** - ngrok URL + server together = full access
-4. **Consider ngrok authentication** - add password protection to tunnel
-5. **Keep software updated** - regularly update Python packages and Boltz
-
-## Next Steps
-
-- See `usage_examples.md` for detailed workflow examples
-- See `troubleshooting.md` for common issues
-- Join the MCP community for support
+---
 
 ## Quick Reference
 
-**Start server on lab computer:**
+### Start Server (Self-Hosted)
 ```bash
-cd ~/boltz-mcp-server/server
+cd ~/boltz-mcp-server
 source venv/bin/activate
-./run_server.sh
+python boltz_mcp_server.py
 ```
 
-**Stop server:**
+### Stop Server
 ```bash
-Ctrl+C
-# Or if running in background:
+# If running in terminal: Ctrl+C
+
+# If running in tmux/screen:
+tmux attach -t boltz
+# Then Ctrl+C
+
+# Or kill process:
 pkill -f boltz_mcp_server.py
 ```
 
-**Get ngrok URL:**
+### Update Server
 ```bash
-cat ~/boltz-mcp-server/server/ngrok_url.txt
+cd ~/boltz-mcp-server
+git pull
+source venv/bin/activate
+pip install -r requirements.txt --upgrade
 ```
 
-**View server logs:**
+### View Logs
 ```bash
-tail -f ~/boltz-mcp-server/server/ngrok.log
+# If using systemd:
+sudo journalctl -u boltz-mcp -f
+
+# If using tmux:
+tmux attach -t boltz
 ```
 
-**Claude Desktop config location:**
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-- Linux: `~/.config/Claude/claude_desktop_config.json`
+### Generate Auth Token
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+---
+
+## Next Steps
+
+- ✅ **Working?** See [Usage Examples](usage_examples.md) for workflows
+- 🔒 **Need security?** Add authentication with bearer tokens
+- 🚀 **Need scaling?** Consider containerization with Docker
+- 📊 **Need monitoring?** Add logging and metrics
+
+---
+
+## Additional Resources
+
+- [FastMCP Documentation](https://gofastmcp.com)
+- [Boltz GitHub](https://github.com/jwohlwend/boltz)
+- [MCP Protocol Specification](https://modelcontextprotocol.io)
+- [Claude Desktop MCP Guide](https://docs.anthropic.com/claude/docs/mcp)
+
+---
+
+**Questions or issues?** Check [troubleshooting.md](troubleshooting.md) or open an issue on GitHub.

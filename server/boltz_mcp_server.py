@@ -3,7 +3,7 @@
 Boltz MCP Server - FastMCP Implementation
 
 This server exposes Boltz protein structure prediction capabilities through the MCP protocol.
-It runs on a remote GPU server and can be accessed by Claude Desktop through ngrok tunneling.
+It runs on a remote GPU server and can be accessed by Claude Desktop through HTTP transport.
 
 Key Features:
 - Accepts PDB files or sequences
@@ -11,6 +11,8 @@ Key Features:
 - Returns predicted structures (CIF files)
 - Handles file uploads and downloads
 - Manages job queue for long-running predictions
+- HTTP transport for remote access
+- Optional authentication support
 """
 
 import os
@@ -23,15 +25,13 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
-# FastMCP imports - simple decorator-based MCP server framework
-# Provides @mcp.tool decorator to expose functions as MCP tools
-from mcp import FastMCP
+# FastMCP imports
+from fastmcp import FastMCP
 
 # File handling for binary data (PDB files, CIF files)
 import base64
 
 # Create the FastMCP server instance
-# This will automatically handle MCP protocol communication
 mcp = FastMCP("Boltz Protein Structure Prediction Server")
 
 # ============================================================================
@@ -620,20 +620,38 @@ if __name__ == "__main__":
     """
     Main entry point for the server.
 
-    FastMCP handles:
-    1. Setting up MCP protocol communication
-    2. Registering all @mcp.tool() decorated functions
-    3. Running the async event loop
-    4. Handling incoming requests from Claude Desktop
+    FastMCP supports multiple transport modes:
+    - stdio: Local development (default)
+    - http: Remote deployment (recommended for production)
 
-    By default, FastMCP uses stdio (standard input/output) for communication.
-    This works with ngrok's stdio forwarding.
+    For HTTP mode, the server runs on specified host:port and is accessible at:
+    http://host:port/mcp/
+
+    Environment variables:
+    - BOLTZ_TRANSPORT: "stdio" or "http" (default: "http")
+    - BOLTZ_HOST: Host to bind to (default: "0.0.0.0")
+    - BOLTZ_PORT: Port to listen on (default: 8000)
+    - BOLTZ_AUTH_TOKEN: Optional bearer token for authentication
     """
     print("Starting Boltz MCP Server...", file=sys.stderr)
     print(f"Upload directory: {UPLOAD_DIR}", file=sys.stderr)
     print(f"Output directory: {OUTPUT_DIR}", file=sys.stderr)
     print(f"Model cache directory: {MODEL_CACHE_DIR}", file=sys.stderr)
 
-    # Run the FastMCP server
-    # This starts the async event loop and begins listening for MCP requests
-    mcp.run()
+    # Get configuration from environment
+    transport = os.getenv("BOLTZ_TRANSPORT", "http")
+    host = os.getenv("BOLTZ_HOST", "0.0.0.0")
+    port = int(os.getenv("BOLTZ_PORT", "8000"))
+
+    if transport == "http":
+        print(f"\n{'='*60}", file=sys.stderr)
+        print(f"Starting HTTP server on {host}:{port}", file=sys.stderr)
+        print(f"Server will be accessible at: http://{host}:{port}/mcp/", file=sys.stderr)
+        print(f"{'='*60}\n", file=sys.stderr)
+
+        # Run with HTTP transport
+        mcp.run(transport="http", host=host, port=port)
+    else:
+        print("Running in STDIO mode (local development)", file=sys.stderr)
+        # Run with stdio transport (default)
+        mcp.run()
